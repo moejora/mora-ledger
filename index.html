@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mora Ledger">
+<meta name="theme-color" content="#0b0d12">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Mora Ledger</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0b0d12;
+  --layer1:   #10131a;
+  --card:     #161a24;
+  --card-h:   #1c2130;
+  --border:   rgba(255,255,255,0.06);
+  --border-m: rgba(255,255,255,0.10);
+  --green:    #2dd4a0;
+  --green-bg: rgba(45,212,160,0.08);
+  --red:      #f87171;
+  --red-bg:   rgba(248,113,113,0.08);
+  --blue:     #7ea6ff;
+  --blue-bg:  rgba(126,166,255,0.08);
+  --amber:    #fbbf6a;
+  --amber-bg: rgba(251,191,106,0.08);
+  --text:     #e8edf5;
+  --text2:    #8b96a8;
+  --text3:    #454f5e;
+  --r:        14px;
+  --r-sm:     8px;
+  --safe-top:    env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Prevent iOS bounce scroll on body */
+  overscroll-behavior: none;
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(11,13,18,0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  padding-top: var(--safe-top);
+  height: calc(60px + var(--safe-top));
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 12px;
+}
+.wordmark { font-weight: 600; font-size: 17px; color: var(--text); letter-spacing: -0.3px; }
+.wordmark em { font-style: normal; color: var(--blue); }
+.nav {
+  display: flex; gap: 4px;
+  background: var(--layer1);
+  border: 1px solid var(--border);
+  padding: 4px; border-radius: 10px;
+}
+.nav-btn {
+  background: transparent; border: none;
+  color: var(--text2); padding: 6px 15px;
+  border-radius: 7px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { background: var(--card-h); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+/* ── PAGES ── */
+.page { display: none; animation: fadeUp 0.22s ease; }
+.page.active { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wrap {
+  max-width: 820px; margin: 0 auto;
+  padding: 36px 20px;
+  padding-bottom: calc(36px + var(--safe-bottom));
+}
+
+/* ── HOME ── */
+.home-label {
+  font-size: 13px; font-weight: 500;
+  color: var(--text3); letter-spacing: 0.3px;
+  text-align: center; margin-bottom: 32px;
+}
+.choice-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px; max-width: 520px; margin: 0 auto;
+}
+.choice {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 36px 24px;
+  cursor: pointer; transition: all 0.2s;
+  text-align: center; position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.choice::after {
+  content: ''; position: absolute; inset: 0; opacity: 0;
+  transition: opacity 0.25s; border-radius: var(--r);
+}
+.choice.c-stocks::after { background: radial-gradient(ellipse at 50% 0%, rgba(45,212,160,0.09), transparent 70%); }
+.choice.c-gamble::after { background: radial-gradient(ellipse at 50% 0%, rgba(248,113,113,0.09), transparent 70%); }
+.choice:active { transform: scale(0.97); }
+.choice:hover  { border-color: var(--border-m); transform: translateY(-2px); box-shadow: 0 14px 40px rgba(0,0,0,0.3); }
+.choice:hover::after { opacity: 1; }
+.choice-icon { font-size: 28px; margin-bottom: 12px; display: block; }
+.choice-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.c-stocks .choice-title { color: var(--green); }
+.c-gamble .choice-title { color: var(--red); }
+.choice-sub { font-size: 12px; color: var(--text3); }
+
+/* ── FORMS ── */
+.form-wrap { max-width: 620px; margin: 0 auto; }
+.form-top { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.back {
+  width: 34px; height: 34px; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text2); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.back:active { opacity: 0.7; }
+.form-title { font-size: 21px; font-weight: 600; letter-spacing: -0.4px; flex: 1; }
+.fbadge { font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.fbadge-s { background: var(--green-bg); color: var(--green); }
+.fbadge-g { background: var(--red-bg); color: var(--red); }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.full { grid-column: 1 / -1; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12px; font-weight: 500; color: var(--text2); }
+.opt-tag { color: var(--text3); font-weight: 400; font-size: 11px; }
+
+.field input, .field select, .field textarea {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text);
+  padding: 11px 13px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px; /* 16px prevents iOS zoom on focus */
+  font-weight: 400; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
+  -webkit-appearance: none;
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text3); }
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(126,166,255,0.1);
+}
+.field select { cursor: pointer; }
+.field textarea { resize: none; min-height: 82px; }
+
+/* Segmented controls */
+.seg {
+  display: flex; background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 3px; gap: 3px;
+}
+.seg-btn {
+  flex: 1; background: transparent; border: none;
+  color: var(--text2); padding: 9px 10px;
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.18s; text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.seg-btn:active { opacity: 0.75; }
+.seg-win  { background: var(--green-bg) !important; color: var(--green) !important; }
+.seg-loss { background: var(--red-bg)   !important; color: var(--red)   !important; }
+.seg-call { background: var(--blue-bg)  !important; color: var(--blue)  !important; }
+.seg-put  { background: var(--amber-bg) !important; color: var(--amber) !important; }
+
+/* Preview bar */
+.preview {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.prev-lbl { font-size: 12px; color: var(--text2); font-weight: 500; }
+.prev-num { font-size: 20px; font-weight: 700; color: var(--text3); letter-spacing: -0.3px; }
+.pn-pos { color: var(--green); }
+.pn-neg { color: var(--red); }
+
+.btn-submit {
+  background: var(--blue); border: none; border-radius: var(--r-sm);
+  color: #06090f; padding: 13px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: all 0.18s; margin-top: 4px;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
+}
+.btn-submit:active { opacity: 0.85; transform: scale(0.99); }
+
+/* ── LOG ── */
+.toolbar { display: flex; gap: 10px; margin-bottom: 22px; }
+.btn-ol {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text2);
+  padding: 9px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 7px;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-export:active, .btn-export:hover { border-color: var(--green); color: var(--green); }
+.btn-clear:active,  .btn-clear:hover  { border-color: var(--red);   color: var(--red);   }
+
+/* Stats */
+.stats-row {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 10px; margin-bottom: 24px;
+}
+.stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 14px; }
+.stat-lbl { font-size: 11.5px; font-weight: 500; color: var(--text2); margin-bottom: 7px; }
+.stat-num { font-size: 21px; font-weight: 700; letter-spacing: -0.5px; }
+.sn-g { color: var(--green); } .sn-r { color: var(--red); }
+.sn-b { color: var(--blue); }  .sn-a { color: var(--amber); }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 4px; background: var(--layer1);
+  border: 1px solid var(--border); padding: 4px;
+  border-radius: 10px; margin-bottom: 16px; width: 100%;
+}
+.tab-btn {
+  flex: 1; background: transparent; border: none;
+  color: var(--text2); padding: 8px 10px; border-radius: 7px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-btn.active { background: var(--card-h); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+
+/* Cards on mobile instead of table */
+.entry-list { display: flex; flex-direction: column; gap: 10px; }
+.entry-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px;
+  position: relative;
+}
+.ec-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.ec-ticker { font-size: 16px; font-weight: 700; color: var(--blue); }
+.ec-game   { font-size: 16px; font-weight: 700; color: var(--amber); }
+.ec-date   { font-size: 12px; color: var(--text3); margin-left: auto; }
+.pill { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.pill-win  { background: var(--green-bg); color: var(--green); }
+.pill-loss { background: var(--red-bg);   color: var(--red);   }
+.pill-call { background: var(--blue-bg);  color: var(--blue);  }
+.pill-put  { background: var(--amber-bg); color: var(--amber); }
+.ec-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 10px; }
+.ec-stat { }
+.ec-stat-lbl { font-size: 10.5px; color: var(--text3); font-weight: 500; margin-bottom: 2px; }
+.ec-stat-val { font-size: 14px; font-weight: 600; color: var(--text); }
+.ec-notes {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px; color: var(--text2); line-height: 1.4;
+}
+.del-btn {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: 18px; padding: 2px 6px;
+  border-radius: 5px; transition: all 0.15s; line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+.del-btn:active, .del-btn:hover { color: var(--red); background: var(--red-bg); }
+
+.empty {
+  text-align: center; padding: 52px 24px;
+  color: var(--text3); font-size: 14px;
+  border: 1px solid var(--border); border-radius: var(--r);
+}
+.empty-icon { font-size: 26px; margin-bottom: 10px; display: block; opacity: 0.4; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: calc(20px + var(--safe-bottom)); right: 20px;
+  background: var(--card-h); border: 1px solid var(--border-m);
+  color: var(--text); padding: 11px 18px;
+  border-radius: var(--r-sm); font-size: 13.5px; font-weight: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  transform: translateY(14px); opacity: 0;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 9999; display: flex; align-items: center; gap: 9px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.t-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* Offline banner */
+.offline-bar {
+  background: var(--amber-bg); border-bottom: 1px solid var(--amber);
+  color: var(--amber); text-align: center;
+  padding: 8px; font-size: 12.5px; font-weight: 500;
+  display: none;
+}
+.offline-bar.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="offline-bar" id="offline-bar">⚠ You're offline — app running from cache</div>
+
+<header>
+  <div class="wordmark">Mora <em>Ledger</em></div>
+  <nav class="nav">
+    <button class="nav-btn active" id="nv-new" onclick="go('home')">+ New</button>
+    <button class="nav-btn"        id="nv-log" onclick="openLog()">Log</button>
+  </nav>
+</header>
+
+<!-- HOME -->
+<div class="page active" id="pg-home">
+  <div class="wrap">
+    <p class="home-label">What are you logging?</p>
+    <div class="choice-row">
+      <div class="choice c-stocks" onclick="openForm('stocks')">
+        <span class="choice-icon">📈</span>
+        <div class="choice-title">Stocks</div>
+        <div class="choice-sub">Options · Calls · Puts</div>
+      </div>
+      <div class="choice c-gamble" onclick="openForm('gamble')">
+        <span class="choice-icon">🎰</span>
+        <div class="choice-title">Gambling</div>
+        <div class="choice-sub">Casino · Sports · Whatever</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STOCKS FORM -->
+<div class="page" id="pg-stocks">
+  <div class="wrap">
+    <div class="form-wrap">
+      <div class="form-top">
+        <button class="back" onclick="go('home')">←</button>
+        <div class="form-title">New Trade</div>
+        <span class="fbadge fbadge-s">Stocks</span>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Result</label>
+          <div class="seg">
+            <button class="seg-btn" id="s-win"  onclick="tog('s-res','win')">Win</button>
+            <button class="seg-btn" id="s-loss" onclick="tog('s-res','loss')">Loss</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Option type</label>
+          <div class="seg">
+            <button class="seg-btn" id="s-call" onclick="tog('s-type','call')">Call</button>
+            <button class="seg-btn" id="s-put"  onclick="tog('s-type','put')">Put</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Ticker / Symbol</label>
+          <input type="text" id="s-ticker" placeholder="SPY, AAPL…" autocapitalize="characters" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Contracts</label>
+          <input type="number" id="s-ct" placeholder="1" min="1" step="1" value="1" inputmode="numeric" oninput="calcPnl()">
+        </div>
+        <div class="field">
+          <label>Entry price ($)</label>
+          <input type="number" id="s-ep" placeholder="0.00" step="0.01" inputmode="decimal" oninput="calcPnl()">
+        </div>
+        <div class="field">
+          <label>Exit price ($)</label>
+          <input type="number" id="s-xp" placeholder="0.00" step="0.01" inputmode="decimal" oninput="calcPnl()">
+        </div>
+        <div class="field">
+          <label>Entry date &amp; time</label>
+          <input type="datetime-local" id="s-edt">
+        </div>
+        <div class="field">
+          <label>Exit date &amp; time</label>
+          <input type="datetime-local" id="s-xdt">
+        </div>
+        <div class="field">
+          <label>Strike price ($) <span class="opt-tag">optional</span></label>
+          <input type="number" id="s-strike" placeholder="—" step="0.01" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>Expiration date <span class="opt-tag">optional</span></label>
+          <input type="date" id="s-expiry">
+        </div>
+        <div class="preview full">
+          <span class="prev-lbl">P&amp;L <span style="color:var(--text3);font-weight:400;font-size:11px">×100/contract</span></span>
+          <span class="prev-num" id="s-pnl">—</span>
+        </div>
+        <div class="field full">
+          <label>Notes / Thesis</label>
+          <textarea id="s-notes" placeholder="Why'd you enter? What was the setup?"></textarea>
+        </div>
+        <button class="btn-submit full" onclick="submitStocks()">Log Trade</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GAMBLE FORM -->
+<div class="page" id="pg-gamble">
+  <div class="wrap">
+    <div class="form-wrap">
+      <div class="form-top">
+        <button class="back" onclick="go('home')">←</button>
+        <div class="form-title">New Session</div>
+        <span class="fbadge fbadge-g">Gambling</span>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Game</label>
+          <select id="g-game">
+            <option value="">Choose a game…</option>
+            <option>Blackjack</option>
+            <option>Roulette</option>
+            <option>Craps</option>
+            <option>Poker</option>
+            <option>Slots</option>
+            <option>Sports Betting</option>
+            <option>Online Casino</option>
+            <option>Scratch Tickets</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Location / Platform</label>
+          <input type="text" id="g-loc" placeholder="Casino, app, online…" autocomplete="off">
+        </div>
+        <div class="field full">
+          <label>Result</label>
+          <div class="seg">
+            <button class="seg-btn" id="g-won"  onclick="tog('g-res','won')">Won</button>
+            <button class="seg-btn" id="g-lost" onclick="tog('g-res','lost')">Lost</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Amount ($)</label>
+          <input type="number" id="g-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal" oninput="calcHourly()">
+        </div>
+        <div class="field">
+          <label>Duration (hours)</label>
+          <input type="number" id="g-dur" placeholder="e.g. 2.5" step="0.25" min="0" inputmode="decimal" oninput="calcHourly()">
+        </div>
+        <div class="field">
+          <label>Session date</label>
+          <input type="date" id="g-date">
+        </div>
+        <div class="field">
+          <label>Buy-in ($) <span class="opt-tag">optional</span></label>
+          <input type="number" id="g-buyin" placeholder="Starting stack" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="preview full">
+          <span class="prev-lbl">Hourly rate</span>
+          <span class="prev-num" id="g-hr">—</span>
+        </div>
+        <div class="field full">
+          <label>Notes &amp; regrets 😅</label>
+          <textarea id="g-notes" placeholder="What happened? What would you do differently?"></textarea>
+        </div>
+        <button class="btn-submit full" onclick="submitGamble()">Log Session</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="page" id="pg-log">
+  <div class="wrap">
+    <div class="toolbar">
+      <button class="btn-ol btn-export" onclick="exportExcel()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M4 7l4 4 4-4M2 13h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Export Excel
+      </button>
+      <button class="btn-ol btn-clear" onclick="clearAll()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Clear All
+      </button>
+    </div>
+    <div class="stats-row" id="stats-area"></div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-s" onclick="switchTab('s')">📈 Stocks</button>
+      <button class="tab-btn"        id="tab-g" onclick="switchTab('g')">🎰 Gambling</button>
+    </div>
+    <div id="tc-s"></div>
+    <div id="tc-g" style="display:none"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="t-dot" id="tdot"></div>
+  <span id="tmsg"></span>
+</div>
+
+<script>
+// ── Service Worker Registration ──────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+
+// ── Offline banner ───────────────────────────────────────
+window.addEventListener('online',  () => document.getElementById('offline-bar').classList.remove('show'));
+window.addEventListener('offline', () => document.getElementById('offline-bar').classList.add('show'));
+if (!navigator.onLine) document.getElementById('offline-bar').classList.add('show');
+
+// ── State ────────────────────────────────────────────────
+const T = {};
+
+function getData(){
+  return {
+    stocks:   JSON.parse(localStorage.getItem('ml3_stocks')   || '[]'),
+    gambling: JSON.parse(localStorage.getItem('ml3_gambling') || '[]')
+  };
+}
+function save(stocks, gambling){
+  localStorage.setItem('ml3_stocks',   JSON.stringify(stocks));
+  localStorage.setItem('ml3_gambling', JSON.stringify(gambling));
+}
+
+// ── Navigation ───────────────────────────────────────────
+function go(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  document.getElementById('nv-new').classList.toggle('active', id==='home');
+  document.getElementById('nv-log').classList.toggle('active', id==='log');
+  window.scrollTo(0,0);
+}
+function openLog(){ renderLog(); go('log'); }
+function openForm(type){
+  go(type==='stocks' ? 'stocks' : 'gamble');
+  const now = new Date().toISOString().slice(0,16);
+  if(type==='stocks') document.getElementById('s-edt').value = now;
+  else document.getElementById('g-date').value = now.slice(0,10);
+}
+
+// ── Toggles ──────────────────────────────────────────────
+const togCfg = {
+  's-res':  { win:'seg-win',  loss:'seg-loss', ids:['s-win','s-loss'] },
+  's-type': { call:'seg-call', put:'seg-put',  ids:['s-call','s-put'] },
+  'g-res':  { won:'seg-win', lost:'seg-loss',  ids:['g-won','g-lost'] }
+};
+function tog(group, val){
+  T[group] = val;
+  const cfg = togCfg[group];
+  cfg.ids.forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'seg-btn' + (el.textContent.trim().toLowerCase()===val ? ' '+cfg[val] : '');
+  });
+  if(group.startsWith('s-')) calcPnl();
+  if(group==='g-res') calcHourly();
+}
+
+// ── Calculations ─────────────────────────────────────────
+function calcPnl(){
+  const ep  = parseFloat(document.getElementById('s-ep').value)||0;
+  const xp  = parseFloat(document.getElementById('s-xp').value)||0;
+  const ct  = parseFloat(document.getElementById('s-ct').value)||1;
+  const el  = document.getElementById('s-pnl');
+  if(!ep||!xp){ el.textContent='—'; el.className='prev-num'; return; }
+  const pnl = (xp-ep)*ct*100;
+  const pct = ((xp-ep)/ep*100).toFixed(1);
+  el.textContent = (pnl>=0?'+':'')+'$'+pnl.toFixed(2)+' ('+(pnl>=0?'+':'')+pct+'%)';
+  el.className = 'prev-num '+(pnl>=0?'pn-pos':'pn-neg');
+}
+function calcHourly(){
+  const amt = parseFloat(document.getElementById('g-amt').value)||0;
+  const hrs = parseFloat(document.getElementById('g-dur').value)||0;
+  const el  = document.getElementById('g-hr');
+  if(!amt||!hrs){ el.textContent='—'; el.className='prev-num'; return; }
+  const net = T['g-res']==='lost' ? -amt : amt;
+  const r   = net/hrs;
+  el.textContent = (r>=0?'+':'')+'$'+r.toFixed(2)+'/hr';
+  el.className = 'prev-num '+(r>=0?'pn-pos':'pn-neg');
+}
+
+// ── Submit: Stocks ────────────────────────────────────────
+function submitStocks(){
+  const ticker = document.getElementById('s-ticker').value.trim().toUpperCase();
+  const ep     = parseFloat(document.getElementById('s-ep').value);
+  const xp     = parseFloat(document.getElementById('s-xp').value);
+  const edt    = document.getElementById('s-edt').value;
+  const ct     = parseFloat(document.getElementById('s-ct').value)||1;
+  if(!ticker)        return toast('Enter a ticker symbol', true);
+  if(!ep||isNaN(ep)) return toast('Enter entry price', true);
+  if(!xp||isNaN(xp)) return toast('Enter exit price', true);
+  if(!edt)           return toast('Enter entry time', true);
+  if(!T['s-res'])    return toast('Select win or loss', true);
+  if(!T['s-type'])   return toast('Select call or put', true);
+  const pnl    = (xp-ep)*ct*100;
+  const pnlPct = ((xp-ep)/ep*100);
+  const { stocks, gambling } = getData();
+  stocks.unshift({
+    id:Date.now(), date:edt.slice(0,10), ticker,
+    result:T['s-res'], type:T['s-type'], ct, ep, xp, edt,
+    xdt:document.getElementById('s-xdt').value||'',
+    strike:document.getElementById('s-strike').value||'',
+    expiry:document.getElementById('s-expiry').value||'',
+    pnl:pnl.toFixed(2), pnlPct:pnlPct.toFixed(2),
+    notes:document.getElementById('s-notes').value
+  });
+  save(stocks, gambling);
+  ['s-ticker','s-ep','s-xp','s-xdt','s-strike','s-expiry','s-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('s-ct').value='1';
+  document.getElementById('s-pnl').textContent='—';
+  document.getElementById('s-pnl').className='prev-num';
+  ['s-res','s-type'].forEach(g=>{ delete T[g]; });
+  ['s-win','s-loss','s-call','s-put'].forEach(id=>document.getElementById(id).className='seg-btn');
+  toast('Trade logged'); go('home');
+}
+
+// ── Submit: Gambling ──────────────────────────────────────
+function submitGamble(){
+  const game = document.getElementById('g-game').value;
+  const amt  = parseFloat(document.getElementById('g-amt').value);
+  const date = document.getElementById('g-date').value;
+  if(!game)            return toast('Select a game', true);
+  if(!amt||isNaN(amt)) return toast('Enter an amount', true);
+  if(!date)            return toast('Enter a date', true);
+  if(!T['g-res'])      return toast('Select won or lost', true);
+  const net = T['g-res']==='lost' ? -amt : amt;
+  const hrs = parseFloat(document.getElementById('g-dur').value)||0;
+  const hrR = hrs>0 ? (net/hrs).toFixed(2) : '';
+  const { stocks, gambling } = getData();
+  gambling.unshift({
+    id:Date.now(), date, game,
+    location:document.getElementById('g-loc').value,
+    result:T['g-res'], amount:amt.toFixed(2), net:net.toFixed(2),
+    buyIn:document.getElementById('g-buyin').value||'',
+    duration:hrs, hrRate:hrR,
+    notes:document.getElementById('g-notes').value
+  });
+  save(stocks, gambling);
+  ['g-loc','g-amt','g-dur','g-buyin','g-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('g-game').value='';
+  document.getElementById('g-hr').textContent='—';
+  document.getElementById('g-hr').className='prev-num';
+  delete T['g-res'];
+  ['g-won','g-lost'].forEach(id=>document.getElementById(id).className='seg-btn');
+  toast('Session logged'); go('home');
+}
+
+// ── Render Log ────────────────────────────────────────────
+function renderLog(){
+  const { stocks, gambling } = getData();
+  const sPnl = stocks.reduce((s,t)=>s+parseFloat(t.pnl),0);
+  const wins = stocks.filter(t=>t.result==='win').length;
+  const wr   = stocks.length ? (wins/stocks.length*100).toFixed(0) : '—';
+  const gNet = gambling.reduce((s,g)=>s+parseFloat(g.net),0);
+  const cNet = sPnl+gNet;
+
+  document.getElementById('stats-area').innerHTML = `
+    <div class="stat"><div class="stat-lbl">Stock P&L</div>
+      <div class="stat-num ${sPnl>=0?'sn-g':'sn-r'}">${sPnl>=0?'+':''}$${Math.abs(sPnl).toFixed(2)}</div></div>
+    <div class="stat"><div class="stat-lbl">Win rate</div>
+      <div class="stat-num sn-b">${wr}%</div></div>
+    <div class="stat"><div class="stat-lbl">Gambling net</div>
+      <div class="stat-num ${gNet>=0?'sn-g':'sn-r'}">${gNet>=0?'+':''}$${Math.abs(gNet).toFixed(2)}</div></div>
+    <div class="stat"><div class="stat-lbl">Combined net</div>
+      <div class="stat-num ${cNet>=0?'sn-g':'sn-r'}">${cNet>=0?'+':''}$${Math.abs(cNet).toFixed(2)}</div></div>
+  `;
+
+  // Stocks — card layout for mobile
+  document.getElementById('tc-s').innerHTML = stocks.length===0
+    ? `<div class="empty"><span class="empty-icon">📈</span>No stock trades yet.</div>`
+    : `<div class="entry-list">${stocks.map(t=>`
+      <div class="entry-card">
+        <button class="del-btn" onclick="delEntry('stocks',${t.id})">×</button>
+        <div class="ec-top">
+          <span class="ec-ticker">${t.ticker}</span>
+          <span class="pill pill-${t.type}">${cap(t.type)}</span>
+          <span class="pill pill-${t.result}">${cap(t.result)}</span>
+          <span class="ec-date">${t.date}</span>
+        </div>
+        <div class="ec-grid">
+          <div class="ec-stat"><div class="ec-stat-lbl">Entry</div><div class="ec-stat-val">$${t.ep}</div></div>
+          <div class="ec-stat"><div class="ec-stat-lbl">Exit</div><div class="ec-stat-val">$${t.xp}</div></div>
+          <div class="ec-stat"><div class="ec-stat-lbl">Contracts</div><div class="ec-stat-val">${t.ct}</div></div>
+          <div class="ec-stat">
+            <div class="ec-stat-lbl">P&L</div>
+            <div class="ec-stat-val" style="color:${parseFloat(t.pnl)>=0?'var(--green)':'var(--red)'}">
+              ${parseFloat(t.pnl)>=0?'+':''}$${t.pnl}
+            </div>
+          </div>
+          <div class="ec-stat">
+            <div class="ec-stat-lbl">P&L %</div>
+            <div class="ec-stat-val" style="color:${parseFloat(t.pnlPct)>=0?'var(--green)':'var(--red)'}">
+              ${parseFloat(t.pnlPct)>=0?'+':''}${t.pnlPct}%
+            </div>
+          </div>
+          ${t.expiry?`<div class="ec-stat"><div class="ec-stat-lbl">Expiry</div><div class="ec-stat-val" style="color:var(--text2)">${t.expiry}</div></div>`:''}
+        </div>
+        ${t.notes?`<div class="ec-notes">${t.notes}</div>`:''}
+      </div>`).join('')}</div>`;
+
+  // Gambling — card layout
+  document.getElementById('tc-g').innerHTML = gambling.length===0
+    ? `<div class="empty"><span class="empty-icon">🎰</span>No gambling sessions yet.</div>`
+    : `<div class="entry-list">${gambling.map(g=>`
+      <div class="entry-card">
+        <button class="del-btn" onclick="delEntry('gambling',${g.id})">×</button>
+        <div class="ec-top">
+          <span class="ec-game">${g.game}</span>
+          <span class="pill ${g.result==='won'?'pill-win':'pill-loss'}">${cap(g.result)}</span>
+          <span class="ec-date">${g.date}</span>
+        </div>
+        ${g.location?`<div style="font-size:12px;color:var(--text3);margin-bottom:4px">${g.location}</div>`:''}
+        <div class="ec-grid">
+          <div class="ec-stat">
+            <div class="ec-stat-lbl">Net</div>
+            <div class="ec-stat-val" style="color:${parseFloat(g.net)>=0?'var(--green)':'var(--red)'}">
+              ${parseFloat(g.net)>=0?'+':''}$${Math.abs(parseFloat(g.net)).toFixed(2)}
+            </div>
+          </div>
+          ${g.duration?`<div class="ec-stat"><div class="ec-stat-lbl">Duration</div><div class="ec-stat-val">${g.duration}h</div></div>`:''}
+          ${g.hrRate?`<div class="ec-stat">
+            <div class="ec-stat-lbl">$/hr</div>
+            <div class="ec-stat-val" style="color:${parseFloat(g.hrRate)>=0?'var(--green)':'var(--red)'}">
+              ${parseFloat(g.hrRate)>=0?'+':''}$${g.hrRate}/hr
+            </div>
+          </div>`:''}
+          ${g.buyIn?`<div class="ec-stat"><div class="ec-stat-lbl">Buy-in</div><div class="ec-stat-val">$${parseFloat(g.buyIn).toFixed(2)}</div></div>`:''}
+        </div>
+        ${g.notes?`<div class="ec-notes">${g.notes}</div>`:''}
+      </div>`).join('')}</div>`;
+}
+
+function switchTab(tab){
+  document.getElementById('tab-s').classList.toggle('active', tab==='s');
+  document.getElementById('tab-g').classList.toggle('active', tab==='g');
+  document.getElementById('tc-s').style.display = tab==='s'?'block':'none';
+  document.getElementById('tc-g').style.display = tab==='g'?'block':'none';
+}
+function delEntry(type, id){
+  const { stocks, gambling } = getData();
+  if(type==='stocks') save(stocks.filter(t=>t.id!==id), gambling);
+  else save(stocks, gambling.filter(g=>g.id!==id));
+  renderLog(); toast('Entry removed');
+}
+
+// ── Export ────────────────────────────────────────────────
+function exportExcel(){
+  const { stocks, gambling } = getData();
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet([
+    ['Date','Ticker','Type','Result','Contracts','Entry $','Exit $','P&L ($)','P&L (%)','Entry Time','Exit Time','Strike','Expiry','Notes'],
+    ...stocks.map(t=>[t.date,t.ticker,cap(t.type),cap(t.result),t.ct,t.ep,t.xp,
+      parseFloat(t.pnl),parseFloat(t.pnlPct),t.edt,t.xdt,t.strike,t.expiry,t.notes])
+  ]);
+  ws1['!cols']=[12,10,6,7,10,9,9,10,8,18,18,8,10,40].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Stocks');
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['Date','Game','Location','Result','Amount ($)','Net ($)','Buy-In ($)','Duration (hrs)','$/hr','Notes'],
+    ...gambling.map(g=>[g.date,g.game,g.location,cap(g.result),
+      parseFloat(g.amount),parseFloat(g.net),g.buyIn?parseFloat(g.buyIn):'',
+      g.duration,g.hrRate?parseFloat(g.hrRate):'',g.notes])
+  ]);
+  ws2['!cols']=[12,14,16,7,12,12,12,14,10,40].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Gambling');
+  const sPnl=stocks.reduce((s,t)=>s+parseFloat(t.pnl),0);
+  const wins=stocks.filter(t=>t.result==='win').length;
+  const gNet=gambling.reduce((s,g)=>s+parseFloat(g.net),0);
+  const ws3=XLSX.utils.aoa_to_sheet([
+    ['Mora Ledger — Summary',''],['',''],
+    ['Stocks',''],['Total trades',stocks.length],['Wins',wins],
+    ['Losses',stocks.length-wins],
+    ['Win rate',stocks.length?(wins/stocks.length*100).toFixed(1)+'%':'—'],
+    ['Total P&L ($)',parseFloat(sPnl.toFixed(2))],['',''],
+    ['Gambling',''],['Sessions',gambling.length],
+    ['Net ($)',parseFloat(gNet.toFixed(2))],['',''],
+    ['Combined net ($)',parseFloat((sPnl+gNet).toFixed(2))]
+  ]);
+  ws3['!cols']=[{wch:22},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Summary');
+  XLSX.writeFile(wb, 'mora_ledger.xlsx');
+  toast('Excel exported');
+}
+
+function clearAll(){
+  if(!confirm('Delete all data? This cannot be undone.')) return;
+  localStorage.removeItem('ml3_stocks');
+  localStorage.removeItem('ml3_gambling');
+  renderLog(); toast('All data cleared');
+}
+
+function toast(msg, isError=false){
+  const t=document.getElementById('toast');
+  document.getElementById('tdot').style.background = isError?'var(--red)':'var(--green)';
+  document.getElementById('tmsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function cap(s){ return s?s[0].toUpperCase()+s.slice(1):''; }
+</script>
+</body>
+</html>
